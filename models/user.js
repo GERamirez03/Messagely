@@ -107,7 +107,35 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
-  static async messagesFrom(username) { }
+  static async messagesFrom(username) {
+
+    const results = await db.query(`
+      SELECT id, to_username, body, sent_at, read_at
+      FROM messages
+      WHERE from_username=$1`,
+      [username]);
+
+      // map to_username to to_user: {username, first_name, last_name, phone}
+      const returnObject = results.rows.map( async row => {
+
+        // first, get the user row/details for the user receiving the message
+        const toUsername = row.to_username;
+        const toUser = await db.query(`
+          SELECT username, first_name, last_name, phone
+          FROM users
+          WHERE username=$1`,
+          [toUsername]);
+
+        // then, replace the to_username of each message with the toUser object
+        const updatedRow = row;
+        delete updatedRow.to_username;
+        updatedRow.to_user = toUser;
+
+        return updatedRow;
+      });
+
+    return returnObject;
+   }
 
   /** Return messages to this user.
    *
@@ -117,7 +145,34 @@ class User {
    *   {username, first_name, last_name, phone}
    */
 
-  static async messagesTo(username) { }
+  static async messagesTo(username) {
+
+    const results = await db.query(`
+      SELECT id, from_username, body, sent_at, read_at
+      FROM messages
+      WHERE to_username=$1`,
+      [username]);
+
+      // map from_username to from_user: {username, first_name, last_name, phone}
+      const returnObject = results.rows.map( async row => {
+
+        // first, get the user row/details for the user sending the message
+        const fromUsername = row.from_username;
+        const fromUser = await db.query(`
+          SELECT username, first_name, last_name, phone
+          FROM users
+          WHERE username=$1`,
+          [fromUsername]);
+
+        // then, replace the from_username of each message with the fromUser object
+        const updatedRow = row;
+        delete updatedRow.from_username;
+        updatedRow.from_user = fromUser;
+
+        return updatedRow;
+      });
+
+    return returnObject;}
 }
 
 
